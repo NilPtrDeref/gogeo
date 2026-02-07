@@ -44,12 +44,6 @@ var ConvertCmd = &cobra.Command{
 			return err
 		}
 
-		if cmd.Flags().Changed("sp") {
-			if err := shp.Simplify(SimplifyPercentage, alg); err != nil {
-				return err
-			}
-		}
-
 		if DbfPath != "" {
 			dfile, err := os.Open(DbfPath)
 			if err != nil {
@@ -58,6 +52,13 @@ var ConvertCmd = &cobra.Command{
 			defer dfile.Close()
 
 			if err := shp.LoadAttributes(dfile); err != nil {
+				return err
+			}
+		}
+
+		geojson := shp.ToGeoJson()
+		if cmd.Flags().Changed("sp") {
+			if err := simplification.Simplify(geojson, SimplifyPercentage, alg); err != nil {
 				return err
 			}
 		}
@@ -73,7 +74,7 @@ var ConvertCmd = &cobra.Command{
 		}
 
 		encoder := json.NewEncoder(out)
-		return encoder.Encode(shp.ToGeoJson())
+		return encoder.Encode(geojson)
 	},
 }
 

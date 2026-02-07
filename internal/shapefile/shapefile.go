@@ -6,7 +6,6 @@ import (
 
 	. "github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/dbase"
-	"github.com/nilptrderef/gogeo/internal/simplification"
 )
 
 type Shapefile struct {
@@ -101,17 +100,6 @@ func (s *Shapefile) ToGeoJson() GeoJson {
 	return gj
 }
 
-func (s *Shapefile) Simplify(percentage float64, alg simplification.Simplification) error {
-	for i := range s.Records {
-		if s.Records[i].Polygon != nil {
-			if err := s.Records[i].Polygon.Simplify(percentage, alg); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
 type Header struct {
 	File  FileInfo
 	Shape ShapeInfo
@@ -182,19 +170,6 @@ type PolygonHeader struct {
 	Mbr        Rectangle
 	PartCount  uint32
 	PointCount uint32
-}
-
-// If this fails, the caller CANNOT assume that the points/parts are in a valid state.
-// They must still be freed, but it's possible that there are missing/invalid points.
-func (p *Polygon) Simplify(percentage float64, alg simplification.Simplification) error {
-	switch alg {
-	case simplification.Visvalingam:
-		return simplification.VisvalingamSimplify(&p.Points, &p.Parts, percentage)
-	case simplification.DouglasPeucker:
-		return simplification.DouglasPeuckerSimplify(&p.Points, &p.Parts, percentage)
-	}
-	p.Header.PointCount = uint32(len(p.Points))
-	return nil
 }
 
 func (p *Polygon) Parse(r io.Reader) error {

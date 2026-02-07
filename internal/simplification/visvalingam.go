@@ -3,8 +3,6 @@ package simplification
 import (
 	"container/heap"
 	"math"
-
-	. "github.com/nilptrderef/gogeo/internal/common"
 )
 
 // Visvalingam Implementation
@@ -19,49 +17,27 @@ type WeightOptions struct {
 
 // Simplifies a set of points in place using the Visvalingam-Whyatt algorithm.
 func VisvalingamSimplify(
-	pointsPtr *[]Point,
-	partsPtr *[]uint32,
+	coordinates [][][]float64,
 	percentage float64,
-) error {
+) ([][][]float64, error) {
 	// TODO: Allow user to pass in weighting
 	opts := WeightOptions{Weighting: new(float64)}
 	*opts.Weighting = 0.7
 
-	opoints := *pointsPtr
-	*pointsPtr = []Point{}
+	result := make([][][]float64, 0, len(coordinates))
 
-	oparts := *partsPtr
-	*partsPtr = []uint32{}
-
-	for i := range oparts {
-		start := oparts[i]
-		var end uint32
-		if i+1 < len(oparts) {
-			end = oparts[i+1]
-		} else {
-			end = uint32(len(opoints))
-		}
-
-		if int(start) >= len(opoints) {
-			break
-		}
-
-		actualEnd := min(end, uint32(len(opoints)))
-		partPoints := opoints[start:actualEnd]
-
-		simplified, err := visvalingamSimplifyRing(partPoints, percentage, opts)
+	for _, part := range coordinates {
+		simplified, err := visvalingamSimplifyRing(part, percentage, opts)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		*partsPtr = append(*partsPtr, uint32(len(*pointsPtr)))
-		*pointsPtr = append(*pointsPtr, simplified...)
+		result = append(result, simplified)
 	}
-	return nil
+	return result, nil
 }
 
-func calculateMetric(a, b, c Point, opts WeightOptions) float64 {
-	area := 0.5 * math.Abs(a.X*(b.Y-c.Y)+b.X*(c.Y-a.Y)+c.X*(a.Y-b.Y))
+func calculateMetric(a, b, c []float64, opts WeightOptions) float64 {
+	area := 0.5 * math.Abs(a[0]*(b[1]-c[1])+b[0]*(c[1]-a[1])+c[0]*(a[1]-b[1]))
 	if opts.Weighting == nil {
 		return area
 	}
@@ -74,13 +50,13 @@ func calculateMetric(a, b, c Point, opts WeightOptions) float64 {
 	return (-cos*k + 1.0) * area
 }
 
-func calculateCosine(a, b, c Point) float64 {
+func calculateCosine(a, b, c []float64) float64 {
 	// Vector BA
-	bax := a.X - b.X
-	bay := a.Y - b.Y
+	bax := a[0] - b[0]
+	bay := a[1] - b[1]
 	// Vector BC
-	bcx := c.X - b.X
-	bcy := c.Y - b.Y
+	bcx := c[0] - b[0]
+	bcy := c[1] - b[1]
 
 	num := bax*bcx + bay*bcy
 	den := math.Sqrt(bax*bax+bay*bay) * math.Sqrt(bcx*bcx+bcy*bcy)
@@ -115,19 +91,19 @@ func (pq *priorityQueue) Pop() any {
 	return item
 }
 
-func visvalingamSimplifyRing(points []Point, percentage float64, opts WeightOptions) ([]Point, error) {
+func visvalingamSimplifyRing(points [][]float64, percentage float64, opts WeightOptions) ([][]float64, error) {
 	minPoints := 4
 	// Preserve basic shape (Triangle + Closing point)
 
 	if len(points) <= minPoints {
-		res := make([]Point, len(points))
+		res := make([][]float64, len(points))
 		copy(res, points)
 		return res, nil
 	}
 
 	targetLen := max(minPoints, int(float64(len(points))*percentage))
 	if targetLen >= len(points) {
-		res := make([]Point, len(points))
+		res := make([][]float64, len(points))
 		copy(res, points)
 		return res, nil
 	}
@@ -220,7 +196,7 @@ func visvalingamSimplifyRing(points []Point, percentage float64, opts WeightOpti
 	}
 
 	// Reconstruct Result
-	result := make([]Point, currLen)
+	result := make([][]float64, currLen)
 	rindex := 0
 	current := 0
 	for {

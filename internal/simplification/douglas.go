@@ -3,8 +3,6 @@ package simplification
 import (
 	"math"
 	"sort"
-
-	. "github.com/nilptrderef/gogeo/internal/common"
 )
 
 // Douglas-Peucker Implementation
@@ -13,47 +11,25 @@ import (
 // This implementation assigns a "rank" (threshold) to every point, allowing
 // selection by percentage.
 func DouglasPeuckerSimplify(
-	pointsPtr *[]Point,
-	partsPtr *[]uint32,
+	coordinates [][][]float64,
 	percentage float64,
-) error {
-	opoints := *pointsPtr
-	*pointsPtr = []Point{}
+) ([][][]float64, error) {
+	result := make([][][]float64, 0, len(coordinates))
 
-	oparts := *partsPtr
-	*partsPtr = []uint32{}
-
-	for i := range oparts {
-		start := oparts[i]
-		var end uint32
-		if i+1 < len(oparts) {
-			end = oparts[i+1]
-		} else {
-			end = uint32(len(opoints))
-		}
-
-		if int(start) >= len(opoints) {
-			break
-		}
-
-		actualEnd := min(end, uint32(len(opoints)))
-		partPoints := opoints[start:actualEnd]
-
-		simplified, err := douglasPeuckerSimplifyRing(partPoints, percentage)
+	for _, part := range coordinates {
+		simplified, err := douglasPeuckerSimplifyRing(part, percentage)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		*partsPtr = append(*partsPtr, uint32(len(*pointsPtr)))
-		*pointsPtr = append(*pointsPtr, simplified...)
+		result = append(result, simplified)
 	}
-	return nil
+	return result, nil
 }
 
-func douglasPeuckerSimplifyRing(points []Point, percentage float64) ([]Point, error) {
+func douglasPeuckerSimplifyRing(points [][]float64, percentage float64) ([][]float64, error) {
 	minPoints := 4
 	if len(points) <= minPoints {
-		res := make([]Point, len(points))
+		res := make([][]float64, len(points))
 		copy(res, points)
 		return res, nil
 	}
@@ -90,7 +66,7 @@ func douglasPeuckerSimplifyRing(points []Point, percentage float64) ([]Point, er
 	}
 
 	// Filter Points
-	resultList := make([]Point, 0)
+	resultList := make([][]float64, 0)
 	for i, p := range points {
 		if thresholds[i] >= cutoff {
 			resultList = append(resultList, p)
@@ -101,18 +77,18 @@ func douglasPeuckerSimplifyRing(points []Point, percentage float64) ([]Point, er
 }
 
 // Recursive function to calculate maximum distance and assign thresholds
-func processSegment(points []Point, dest []float64, startIdx, endIdx int, depth int, distSqPrev float64) float64 {
-	ax := points[startIdx].X
-	ay := points[startIdx].Y
-	cx := points[endIdx].X
-	cy := points[endIdx].Y
+func processSegment(points [][]float64, dest []float64, startIdx, endIdx int, depth int, distSqPrev float64) float64 {
+	ax := points[startIdx][0]
+	ay := points[startIdx][1]
+	cx := points[endIdx][0]
+	cy := points[endIdx][1]
 
 	var maxDistSq float64 = 0
 	var maxIdx int = 0
 
 	// Find point with maximum distance from segment AC
 	for i := startIdx + 1; i < endIdx; i++ {
-		distSq := getSqSegDist(points[i].X, points[i].Y, ax, ay, cx, cy)
+		distSq := getSqSegDist(points[i][0], points[i][1], ax, ay, cx, cy)
 		if distSq >= maxDistSq {
 			maxDistSq = distSq
 			maxIdx = i

@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/nilptrderef/gogeo/cmd/serve/templates"
 	"github.com/nilptrderef/gogeo/internal/common"
+	"github.com/nilptrderef/gogeo/internal/simplification"
 	"github.com/spf13/cobra"
 )
 
@@ -84,6 +85,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
 		return
 	}
+	simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
 
 	templates.Index(geojson).Render(r.Context(), w)
 }

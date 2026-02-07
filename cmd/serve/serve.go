@@ -1,6 +1,7 @@
 package serve
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/nilptrderef/gogeo/cmd/serve/templates"
+	"github.com/nilptrderef/gogeo/internal/common"
 	"github.com/spf13/cobra"
 )
 
@@ -67,6 +69,21 @@ func init() {
 	ServeCmd.Flags().StringVarP(&StaticDir, "dir", "d", "./cmd/serve/static/", "Directory to serve static files from")
 }
 
-func Index(response http.ResponseWriter, request *http.Request) {
-	templates.Index().Render(request.Context(), response)
+func Index(w http.ResponseWriter, r *http.Request) {
+	file, err := os.Open(filepath.Join(StaticDir, "counties.geojson"))
+	if err != nil {
+		templates.Error("Failed to open file.").Render(r.Context(), w)
+		return
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	var geojson common.GeoJson
+	err = decoder.Decode(&geojson)
+	if err != nil {
+		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
+		return
+	}
+
+	templates.Index(geojson).Render(r.Context(), w)
 }

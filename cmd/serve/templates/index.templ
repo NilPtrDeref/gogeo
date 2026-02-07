@@ -1,6 +1,9 @@
 package templates
 
-templ Index() {
+import "github.com/nilptrderef/gogeo/internal/common"
+import "fmt"
+
+templ Index(geojson common.GeoJson) {
 	<!DOCTYPE html>
 	<html lang="en">
 		<head>
@@ -10,7 +13,12 @@ templ Index() {
 			<link href="css/style.css" rel="stylesheet"/>
 		</head>
 		<body>
-			<p id="geojson-container">Test</p>
+			for _, feature := range geojson.Features {
+				<p>Properties: { fmt.Sprintf("%v", feature.Properties) }</p>
+				for i, part := range feature.Geometry.Coordinates {
+					<p>Part { i }: { len(part) }</p>
+				}
+			}
 		</body>
 	</html>
 }

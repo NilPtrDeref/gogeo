@@ -84,5 +84,4 @@ func init() {
 	ConvertCmd.Flags().Float64VarP(&SimplifyPercentage, "sp", "p", 1.0, "A float between 0 and 1 that represents the approximate percentage of remaining points")
 	ConvertCmd.Flags().StringVarP(&SimplifyAlgorithm, "sa", "a", "doug", "The algorithm to use when simplifying. 'vis' for Visvalingam-Whyatt or 'doug' for Douglas-Peucker)")
 	ConvertCmd.Flags().StringVarP(&OutFile, "output", "o", "", "Output file path")
-	RootCmd.AddCommand(ConvertCmd)
 }

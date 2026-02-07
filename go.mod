@@ -3,6 +3,7 @@ module github.com/nilptrderef/gogeo
 go 1.25.5
 
 require (
+	github.com/a-h/templ v0.3.977
 	github.com/gorilla/mux v1.8.1
 	github.com/spf13/cobra v1.10.2
 )

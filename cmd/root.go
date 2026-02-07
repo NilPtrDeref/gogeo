@@ -3,6 +3,7 @@ package cmd
 import (
 	"os"
 
+	"github.com/nilptrderef/gogeo/cmd/serve"
 	"github.com/spf13/cobra"
 )
 
@@ -19,4 +20,9 @@ func Execute() {
 	if err != nil {
 		os.Exit(1)
 	}
+}
+
+func init() {
+	RootCmd.AddCommand(serve.ServeCmd)
+	RootCmd.AddCommand(ConvertCmd)
 }

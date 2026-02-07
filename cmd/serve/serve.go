@@ -1,4 +1,4 @@
-package cmd
+package serve
 
 import (
 	"fmt"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/nilptrderef/gogeo/cmd/serve/templates"
 	"github.com/spf13/cobra"
 )
 
@@ -37,6 +38,7 @@ var ServeCmd = &cobra.Command{
 
 		// Setup Router
 		r := mux.NewRouter()
+		r.HandleFunc("/", Index)
 
 		// Serve static files
 		// We use StripPrefix so the server doesn't look for /static/filename inside the folder
@@ -62,6 +64,9 @@ var ServeCmd = &cobra.Command{
 func init() {
 	ServeCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port to listen on")
 	ServeCmd.Flags().BoolVarP(&Listen, "listen", "l", false, "Toggle to listen on 0.0.0.0 instead of localhost")
-	ServeCmd.Flags().StringVarP(&StaticDir, "dir", "d", "./static/", "Directory to serve static files from")
-	RootCmd.AddCommand(ServeCmd)
+	ServeCmd.Flags().StringVarP(&StaticDir, "dir", "d", "./cmd/serve/static/", "Directory to serve static files from")
+}
+
+func Index(response http.ResponseWriter, request *http.Request) {
+	templates.Index().Render(request.Context(), response)
 }

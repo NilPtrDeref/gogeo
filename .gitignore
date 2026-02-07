@@ -16,6 +16,10 @@
 coverage.*
 *.coverprofile
 profile.cov
+**.geojson
+tmp
+cmd/serve/templates/*_templ.go
+gogeo
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

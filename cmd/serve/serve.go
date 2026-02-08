@@ -14,6 +14,7 @@ import (
 	"github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/simplification"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 var (
@@ -42,6 +43,7 @@ var ServeCmd = &cobra.Command{
 		// Setup Router
 		r := mux.NewRouter()
 		r.HandleFunc("/", Index)
+		r.HandleFunc("/data", Data)
 
 		// Serve static files
 		// We use StripPrefix so the server doesn't look for /static/filename inside the folder
@@ -88,4 +90,31 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
 
 	templates.Index(geojson).Render(r.Context(), w)
+}
+
+func Data(w http.ResponseWriter, r *http.Request) {
+	file, err := os.Open(filepath.Join(StaticDir, "counties.geojson"))
+	if err != nil {
+		templates.Error("Failed to open file.").Render(r.Context(), w)
+		return
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	var geojson common.GeoJson
+	err = decoder.Decode(&geojson)
+	if err != nil {
+		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
+		return
+	}
+	simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
+
+	counties := geojson.ToProto()
+	data, err := proto.Marshal(counties)
+	if err != nil {
+		templates.Error("Failed to marshal data").Render(r.Context(), w)
+		return
+	}
+
+	w.Write(data)
 }

@@ -1,5 +1,7 @@
 package common
 
+import "github.com/nilptrderef/gogeo/internal/common/pb"
+
 type Point struct {
 	X float64
 	Y float64
@@ -18,6 +20,26 @@ type Range struct {
 type GeoJson struct {
 	Type     string           `json:"type"`
 	Features []GeoJsonFeature `json:"features"`
+}
+
+func (geojson GeoJson) ToProto() *pb.Counties {
+	c := new(pb.Counties)
+	for _, feature := range geojson.Features {
+		var county pb.County
+		county.CountyName = feature.Properties["NAMELSAD"]
+		county.State = StateFips[feature.Properties["STATEFP"]]
+		for _, part := range feature.Geometry.Coordinates {
+			var coordinates pb.Coordinate
+			coordinates.Values = make([]float32, len(part)*2)
+			for i, point := range part {
+				coordinates.Values[i*2] = float32(point[0])
+				coordinates.Values[i*2+1] = float32(point[1])
+			}
+			county.Coordinates = append(county.Coordinates, &coordinates)
+		}
+		c.Counties = append(c.Counties, &county)
+	}
+	return c
 }
 
 type GeoJsonFeature struct {

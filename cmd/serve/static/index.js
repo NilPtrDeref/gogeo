@@ -2,16 +2,23 @@ let container = document.getElementById('geojson-container')
 if (!container) throw new Error('Failed to load container.')
 
 async function load() {
-  let response = await fetch('counties.geojson');
-  let geojson = await response.json();
+  const response = await fetch("/data");
+  const buffer = await response.arrayBuffer();
+  const bytes = new Uint8Array(buffer);
+  const Counties = proto.pb.Counties;
+  const counties = Counties.deserializeBinary(bytes);
+  console.log(counties);
 
-  for (let i = 0; i < geojson.features.length; i++) {
-    container.innerHTML += `<p>${JSON.stringify(geojson.features[i].properties)}</p>`;
-    for (let j = 0; j < geojson.features[i].geometry.coordinates.length; j++) {
-      container.innerHTML += `<p>Part ${j + 1}: ${geojson.features[i].geometry.coordinates.length} points</p>`;
+  let addition = ''
+  for (let i = 0; i < counties.array[0].length; i++) {
+    addition += `<p>${counties.array[0][i][0]}</p>`;
+    for (let j = 0; j < counties.array[0][i][3].length; j++) {
+      addition += `<p>Part ${j + 1}: ${counties.array[0][i][3].length} points</p>`;
     }
-    container.innerHTML += `<br/>`;
+    addition += `<br/>`;
   }
+  container.innerHTML = addition
+  console.log('Done')
 }
 
 load();

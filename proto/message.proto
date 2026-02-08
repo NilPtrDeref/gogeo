@@ -1,0 +1,37 @@
+syntax = "proto3";
+
+package pb;
+
+option go_package = "internal/common/pb";
+
+message Counties {
+  repeated County counties = 1;
+}
+
+message County {
+  string county_name = 1;
+  string state = 2;
+
+  map<string, string> metadata = 3;
+
+  // Array of float32 arrays (e.g. polygons, paths, etc.)
+  repeated Coordinate coordinates = 4;
+}
+
+message Zipcodes {
+  repeated Zipcode zipcodes = 1;
+}
+
+message Zipcode {
+  string zipcode = 1;
+  string state = 2;
+
+  map<string, string> metadata = 3;
+
+  // Array of float32 arrays (e.g. polygons, centroids, boundaries)
+  repeated Coordinate coordinates = 4;
+}
+
+message Coordinate {
+  repeated float values = 1;
+}

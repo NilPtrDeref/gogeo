@@ -1,6 +1,10 @@
 let container = document.getElementById('geojson-container')
 if (!container) throw new Error('Failed to load container.')
 
+// TODO: Draw a minimal map to the screen (using WebGL?). Might need to simplify first.
+let Map = document.getElementById('map')
+if (!Map) throw new Error('Failed to load map canvas.')
+
 async function load() {
   const response = await fetch("/data");
   const buffer = await response.arrayBuffer();

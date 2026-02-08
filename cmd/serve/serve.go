@@ -1,8 +1,8 @@
 package serve
 
 import (
-	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -11,10 +11,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/nilptrderef/gogeo/cmd/serve/templates"
-	"github.com/nilptrderef/gogeo/internal/common"
-	"github.com/nilptrderef/gogeo/internal/simplification"
 	"github.com/spf13/cobra"
-	"github.com/tinylib/msgp/msgp"
 )
 
 var (
@@ -73,44 +70,16 @@ func init() {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
-	file, err := os.Open(filepath.Join(StaticDir, "counties.geojson"))
-	if err != nil {
-		templates.Error("Failed to open file.").Render(r.Context(), w)
-		return
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	var geojson common.GeoJson
-	err = decoder.Decode(&geojson)
-	if err != nil {
-		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
-		return
-	}
-	simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
-
-	templates.Index(geojson).Render(r.Context(), w)
+	templates.Index().Render(r.Context(), w)
 }
 
 func Data(w http.ResponseWriter, r *http.Request) {
-	file, err := os.Open(filepath.Join(StaticDir, "counties.geojson"))
+	file, err := os.Open(filepath.Join(StaticDir, "counties.msgpk"))
 	if err != nil {
 		templates.Error("Failed to open file.").Render(r.Context(), w)
 		return
 	}
 	defer file.Close()
 
-	decoder := json.NewDecoder(file)
-	var geojson common.GeoJson
-	err = decoder.Decode(&geojson)
-	if err != nil {
-		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
-		return
-	}
-	// simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
-
-	counties := geojson.ToCounties()
-	writer := msgp.NewWriter(w)
-	counties.EncodeMsg(writer)
-	writer.Flush()
+	io.Copy(w, file)
 }

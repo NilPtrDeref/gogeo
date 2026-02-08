@@ -35,4 +35,4 @@ tmp_dir = "tmp"
   enabled = true
   proxy_port = 8383
   app_port = 8080
-  app_start_timeout = 15
+  app_start_timeout = 15000

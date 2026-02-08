@@ -20,9 +20,8 @@ profile.cov
 
 # Generated files
 cmd/serve/templates/*_templ.go
-cmd/serve/static/proto
+internal/common/*_gen.go
 gogeo
-internal/common/pb
 tmp
 
 # Dependency directories (remove the comment below to include it)

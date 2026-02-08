@@ -4,16 +4,14 @@ if (!container) throw new Error('Failed to load container.')
 async function load() {
   const response = await fetch("/data");
   const buffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  const Counties = proto.pb.Counties;
-  const counties = Counties.deserializeBinary(bytes);
+  const counties = MessagePack.decode(buffer);
   console.log(counties);
 
   let addition = ''
-  for (let i = 0; i < counties.array[0].length; i++) {
-    addition += `<p>${counties.array[0][i][0]}</p>`;
-    for (let j = 0; j < counties.array[0][i][3].length; j++) {
-      addition += `<p>Part ${j + 1}: ${counties.array[0][i][3][j][0].length} points</p>`;
+  for (let i = 0; i < counties.length; i++) {
+    addition += `<p>${counties[i].name}</p>`;
+    for (let j = 0; j < counties[i].coordinates.length; j++) {
+      addition += `<p>Part ${j + 1}: ${counties[i].coordinates[j].length} points</p>`;
     }
     addition += `<br/>`;
   }

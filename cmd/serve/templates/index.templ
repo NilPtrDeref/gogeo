@@ -10,21 +10,11 @@ templ Index(geojson common.GeoJson) {
 			<meta name="viewport" content="width=device-width, initial-scale=1"/>
 			<title>GoGeo</title>
 			<link href="css/style.css" rel="stylesheet"/>
-			<script src="google-protobuf.js"></script>
-			<script src="proto/coordinate.js"></script>
-			<script src="proto/county.js"></script>
-			<script src="proto/counties.js"></script>
+			<script src="msgpack.min.js"></script>
 			<script src="index.js" defer></script>
 		</head>
 		<body>
 			<p id="geojson-container"></p>
-			<!-- import "fmt" -->
-			<!-- for _, feature := range geojson.Features { -->
-			<!-- 	<p>Properties: { fmt.Sprintf("%v", feature.Properties) }</p> -->
-			<!-- 	for i, part := range feature.Geometry.Coordinates { -->
-			<!-- 		<p>Part { i }: { len(part) }</p> -->
-			<!-- 	} -->
-			<!-- } -->
 		</body>
 	</html>
 }

@@ -14,7 +14,7 @@ import (
 	"github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/simplification"
 	"github.com/spf13/cobra"
-	"google.golang.org/protobuf/proto"
+	"github.com/tinylib/msgp/msgp"
 )
 
 var (
@@ -109,12 +109,8 @@ func Data(w http.ResponseWriter, r *http.Request) {
 	}
 	// simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
 
-	counties := geojson.ToProto()
-	data, err := proto.Marshal(counties)
-	if err != nil {
-		templates.Error("Failed to marshal data").Render(r.Context(), w)
-		return
-	}
-
-	w.Write(data)
+	counties := geojson.ToCounties()
+	writer := msgp.NewWriter(w)
+	counties.EncodeMsg(writer)
+	writer.Flush()
 }

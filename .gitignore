@@ -16,9 +16,10 @@
 coverage.*
 *.coverprofile
 profile.cov
-**.geojson
 
 # Generated files
+**.msgpk
+**.geojson
 cmd/serve/templates/*_templ.go
 internal/common/*_gen.go
 gogeo

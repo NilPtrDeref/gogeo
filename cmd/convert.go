@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/nilptrderef/gogeo/internal/shapefile"
 	"github.com/nilptrderef/gogeo/internal/simplification"
+	"github.com/tinylib/msgp/msgp"
 
 	"github.com/spf13/cobra"
 )
@@ -73,8 +75,18 @@ var ConvertCmd = &cobra.Command{
 			out = os.Stdout
 		}
 
-		encoder := json.NewEncoder(out)
-		return encoder.Encode(geojson)
+		if strings.HasSuffix(OutFile, "msgpk") {
+			counties := geojson.ToCounties()
+			writer := msgp.NewWriter(out)
+			err = counties.EncodeMsg(writer)
+			if err != nil {
+				return err
+			}
+			return writer.Flush()
+		} else {
+			encoder := json.NewEncoder(out)
+			return encoder.Encode(geojson)
+		}
 	},
 }
 

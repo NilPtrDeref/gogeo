@@ -107,7 +107,7 @@ func Data(w http.ResponseWriter, r *http.Request) {
 		templates.Error("Failed to parse geojson from file.").Render(r.Context(), w)
 		return
 	}
-	simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
+	// simplification.Simplify(geojson, 0.05, simplification.DouglasPeucker)
 
 	counties := geojson.ToProto()
 	data, err := proto.Marshal(counties)

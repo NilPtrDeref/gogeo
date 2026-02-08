@@ -13,12 +13,11 @@ async function load() {
   for (let i = 0; i < counties.array[0].length; i++) {
     addition += `<p>${counties.array[0][i][0]}</p>`;
     for (let j = 0; j < counties.array[0][i][3].length; j++) {
-      addition += `<p>Part ${j + 1}: ${counties.array[0][i][3].length} points</p>`;
+      addition += `<p>Part ${j + 1}: ${counties.array[0][i][3][j][0].length} points</p>`;
     }
     addition += `<br/>`;
   }
   container.innerHTML = addition
-  console.log('Done')
 }
 
 load();

@@ -3,6 +3,7 @@ package shapefile
 import (
 	"encoding/binary"
 	"io"
+	"math"
 	"slices"
 	"strconv"
 
@@ -102,11 +103,17 @@ func (s *Shapefile) ToGeoJson() GeoJson {
 	return geojson
 }
 
-func (s *Shapefile) ToCounties() Counties {
-	var counties Counties
+func (s *Shapefile) ToMap() Map {
+	var m Map
+	m.Mbr = s.Header.Shape.Mbr
 
 	for _, record := range s.Records {
 		var county County
+		county.Mbr.Start.X = math.MaxFloat64
+		county.Mbr.Start.Y = math.MaxFloat64
+		county.Mbr.End.X = -math.MaxFloat64
+		county.Mbr.End.Y = -math.MaxFloat64
+
 		county.Id = record.Attrs["GEOID"]
 		county.Name = record.Attrs["NAMELSAD"]
 		county.State = StateAbbrFips[record.Attrs["STATEFP"]]
@@ -123,13 +130,16 @@ func (s *Shapefile) ToCounties() Counties {
 				current = len(county.Parts) - 1
 			}
 
-			// Rounding can be applied here if needed, but standard float64 used
 			county.Parts[current] = append(county.Parts[current], pt.X, pt.Y)
+			county.Mbr.Start.X = min(county.Mbr.Start.X, pt.X)
+			county.Mbr.End.X = max(county.Mbr.End.X, pt.X)
+			county.Mbr.Start.Y = min(county.Mbr.Start.Y, pt.Y)
+			county.Mbr.End.Y = max(county.Mbr.End.Y, pt.Y)
 		}
-		counties = append(counties, county)
+		m.Counties = append(m.Counties, county)
 	}
 
-	return counties
+	return m
 }
 
 type Header struct {

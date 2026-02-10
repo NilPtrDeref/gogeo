@@ -1,36 +1,31 @@
 package common
 
 import (
+	"math"
 	"strconv"
 
 	"github.com/nilptrderef/gogeo/internal/simplification"
 )
-
-type Point struct {
-	X float64
-	Y float64
-}
-
-type Rectangle struct {
-	Start Point
-	End   Point
-}
-
-type Range struct {
-	Min float64
-	Max float64
-}
 
 type GeoJson struct {
 	Type     string           `json:"type"`
 	Features []GeoJsonFeature `json:"features"`
 }
 
-// TODO: Consider adding a minimum bounding rectangle, could be useful on the frontend.
-func (geojson GeoJson) ToCounties() Counties {
-	var c Counties
+func (geojson GeoJson) ToMap() Map {
+	var m Map
+	m.Mbr.Start.X = math.MaxFloat64
+	m.Mbr.Start.Y = math.MaxFloat64
+	m.Mbr.End.X = -math.MaxFloat64
+	m.Mbr.End.Y = -math.MaxFloat64
+
 	for _, feature := range geojson.Features {
 		var county County
+		county.Mbr.Start.X = math.MaxFloat64
+		county.Mbr.Start.Y = math.MaxFloat64
+		county.Mbr.End.X = -math.MaxFloat64
+		county.Mbr.End.Y = -math.MaxFloat64
+
 		county.Id = feature.Properties["GEOID"]
 		county.Name = feature.Properties["NAMELSAD"]
 		county.State = StateAbbrFips[feature.Properties["STATEFP"]]
@@ -44,13 +39,24 @@ func (geojson GeoJson) ToCounties() Counties {
 			coordinates := make([]float64, len(part)*2)
 			for i, point := range part {
 				coordinates[i*2] = point[0]
+				county.Mbr.Start.X = min(county.Mbr.Start.X, point[0])
+				county.Mbr.End.X = max(county.Mbr.End.X, point[0])
+				m.Mbr.Start.X = min(m.Mbr.Start.X, point[0])
+				m.Mbr.End.X = max(m.Mbr.End.X, point[0])
+
 				coordinates[i*2+1] = point[1]
+				county.Mbr.Start.Y = min(county.Mbr.Start.Y, point[1])
+				county.Mbr.End.Y = max(county.Mbr.End.Y, point[1])
+				m.Mbr.Start.Y = min(m.Mbr.Start.Y, point[1])
+				m.Mbr.End.Y = max(m.Mbr.End.Y, point[1])
 			}
 			county.Parts = append(county.Parts, coordinates)
 		}
-		c = append(c, county)
+
+		m.Counties = append(m.Counties, county)
 	}
-	return c
+
+	return m
 }
 
 func (geojson *GeoJson) SimplifyInPlace(simplifier simplification.Simplifier, percentage float64) error {

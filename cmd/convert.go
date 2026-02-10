@@ -71,14 +71,14 @@ var ConvertCmd = &cobra.Command{
 		}
 
 		if strings.HasSuffix(OutFile, "msgpk") {
-			counties := shp.ToCounties()
-			err = counties.SimplifyInPlace(simplifier, SimplifyPercentage)
+			m := shp.ToMap()
+			err = m.SimplifyInPlace(simplifier, SimplifyPercentage)
 			if err != nil {
 				return err
 			}
 
 			writer := msgp.NewWriter(out)
-			err = counties.EncodeMsg(writer)
+			err = m.EncodeMsg(writer)
 			if err != nil {
 				return err
 			}

@@ -1,8 +1,27 @@
 package common
 
+import "github.com/nilptrderef/gogeo/internal/simplification"
+
 //go:generate msgp -tests=false
 
 type Counties []County
+
+func (counties Counties) SimplifyInPlace(simplifier simplification.Simplifier, percentage float64) error {
+	if simplifier == nil {
+		return nil
+	}
+
+	for i := range counties {
+		for j := range counties[i].Parts {
+			var err error
+			counties[i].Parts[j], err = simplifier.Simplify(counties[i].Parts[j], percentage)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
 
 type County struct {
 	Id          string        `msg:"id"`
@@ -13,4 +32,4 @@ type County struct {
 	Parts       []Coordinates `msg:"coordinates"`
 }
 
-type Coordinates []float32
+type Coordinates []float64

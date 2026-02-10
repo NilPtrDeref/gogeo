@@ -25,14 +25,16 @@ var ConvertCmd = &cobra.Command{
 	Use:   "convert",
 	Short: "Convert a shapefile, and optionally a '.dbf' file into GeoJSON",
 	RunE: func(cmd *cobra.Command, args []string) error {
-		var alg simplification.Simplification
-		switch SimplifyAlgorithm {
-		case "vis":
-			alg = simplification.Visvalingam
-		case "doug":
-			alg = simplification.DouglasPeucker
-		default:
-			return fmt.Errorf("invalid settings")
+		var simplifier simplification.Simplifier
+		if cmd.Flags().Changed("sp") {
+			switch SimplifyAlgorithm {
+			case "vis":
+				simplifier = simplification.VisvalingamSimplifier{}
+			case "doug":
+				simplifier = simplification.DouglasPeuckerSimplifier{}
+			default:
+				return fmt.Errorf("invalid settings")
+			}
 		}
 
 		file, err := os.Open(ShpPath)
@@ -58,13 +60,6 @@ var ConvertCmd = &cobra.Command{
 			}
 		}
 
-		geojson := shp.ToGeoJson()
-		if cmd.Flags().Changed("sp") {
-			if err := simplification.Simplify(geojson, SimplifyPercentage, alg); err != nil {
-				return err
-			}
-		}
-
 		var out *os.File
 		if OutFile != "" {
 			out, err = os.Create(OutFile)
@@ -76,17 +71,27 @@ var ConvertCmd = &cobra.Command{
 		}
 
 		if strings.HasSuffix(OutFile, "msgpk") {
-			counties := geojson.ToCounties()
+			counties := shp.ToCounties()
+			err = counties.SimplifyInPlace(simplifier, SimplifyPercentage)
+			if err != nil {
+				return err
+			}
+
 			writer := msgp.NewWriter(out)
 			err = counties.EncodeMsg(writer)
 			if err != nil {
 				return err
 			}
 			return writer.Flush()
-		} else {
-			encoder := json.NewEncoder(out)
-			return encoder.Encode(geojson)
 		}
+
+		geojson := shp.ToGeoJson()
+		err = geojson.SimplifyInPlace(simplifier, SimplifyPercentage)
+		if err != nil {
+			return err
+		}
+		encoder := json.NewEncoder(out)
+		return encoder.Encode(geojson)
 	},
 }
 

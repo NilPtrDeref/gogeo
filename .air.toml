@@ -1,13 +1,13 @@
 root = "."
-tmp_dir = "tmp"
+tmp_dir = "build"
 
 [build]
-  bin = "gogeo"
-  cmd = "templ generate && go build ."
+  bin = "build/gogeo"
+  cmd = "make"
   delay = 1000
-  exclude_dir = ["assets", "tmp", "vendor"]
+  exclude_dir = ["assets", "build", "vendor"]
   exclude_file = []
-  exclude_regex = [".*_templ.go"]
+  exclude_regex = [".*_templ.go", ".*_gen.go"]
   exclude_unchanged = false
   follow_symlink = false
   full_bin = ""

@@ -24,6 +24,7 @@ cmd/serve/templates/*_templ.go
 internal/common/*_gen.go
 gogeo
 tmp
+build
 
 # Dependency directories (remove the comment below to include it)
 # vendor/

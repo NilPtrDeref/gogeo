@@ -3,6 +3,8 @@ package shapefile
 import (
 	"encoding/binary"
 	"io"
+	"slices"
+	"strconv"
 
 	. "github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/dbase"
@@ -84,20 +86,50 @@ func (s *Shapefile) LoadAttributes(r io.Reader) error {
 }
 
 func (s *Shapefile) ToGeoJson() GeoJson {
-	gj := GeoJson{
+	geojson := GeoJson{
 		Type:     "FeatureCollection",
 		Features: make([]GeoJsonFeature, len(s.Records)),
 	}
 
-	for i, r := range s.Records {
-		gj.Features[i] = GeoJsonFeature{
+	for i, record := range s.Records {
+		geojson.Features[i] = GeoJsonFeature{
 			Type:       "Feature",
-			Properties: r.Attrs,
-			Geometry:   r.Polygon.ToGeoJsonPolygon(),
+			Properties: record.Attrs,
+			Geometry:   record.Polygon.ToGeoJsonPolygon(),
 		}
 	}
 
-	return gj
+	return geojson
+}
+
+func (s *Shapefile) ToCounties() Counties {
+	var counties Counties
+
+	for _, record := range s.Records {
+		var county County
+		county.Id = record.Attrs["GEOID"]
+		county.Name = record.Attrs["NAMELSAD"]
+		county.State = StateAbbrFips[record.Attrs["STATEFP"]]
+
+		lat, _ := strconv.ParseFloat(record.Attrs["INTPTLAT"], 32)
+		county.InternalLat = float32(lat)
+		lon, _ := strconv.ParseFloat(record.Attrs["INTPTLON"], 32)
+		county.InternalLon = float32(lon)
+
+		current := -1
+		for i, pt := range record.Polygon.Points {
+			if slices.Contains(record.Polygon.Parts, uint32(i)) {
+				county.Parts = append(county.Parts, nil)
+				current = len(county.Parts) - 1
+			}
+
+			// Rounding can be applied here if needed, but standard float64 used
+			county.Parts[current] = append(county.Parts[current], pt.X, pt.Y)
+		}
+		counties = append(counties, county)
+	}
+
+	return counties
 }
 
 type Header struct {

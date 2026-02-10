@@ -1,6 +1,10 @@
 package common
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/nilptrderef/gogeo/internal/simplification"
+)
 
 type Point struct {
 	X float64
@@ -37,16 +41,33 @@ func (geojson GeoJson) ToCounties() Counties {
 		county.InternalLon = float32(lon)
 
 		for _, part := range feature.Geometry.Coordinates {
-			coordinates := make([]float32, len(part)*2)
+			coordinates := make([]float64, len(part)*2)
 			for i, point := range part {
-				coordinates[i*2] = float32(point[0])
-				coordinates[i*2+1] = float32(point[1])
+				coordinates[i*2] = point[0]
+				coordinates[i*2+1] = point[1]
 			}
 			county.Parts = append(county.Parts, coordinates)
 		}
 		c = append(c, county)
 	}
 	return c
+}
+
+func (geojson *GeoJson) SimplifyInPlace(simplifier simplification.Simplifier, percentage float64) error {
+	if simplifier == nil {
+		return nil
+	}
+
+	for i := range geojson.Features {
+		for j := range geojson.Features[i].Geometry.Coordinates {
+			var err error
+			geojson.Features[i].Geometry.Coordinates[j], err = simplifier.SimplifyPoints(geojson.Features[i].Geometry.Coordinates[j], percentage)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
 }
 
 type GeoJsonFeature struct {

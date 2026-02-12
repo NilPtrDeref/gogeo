@@ -87,7 +87,7 @@ async function main() {
   const excluded = ["AK", "HI", "PR", "GU", "AS", "VI", "MP", ""];
   const conus = m.counties.filter(county => county.state && !excluded.includes(county.state));
 
-  let minY = Infinity, minX = Infinity, maxY = -Infinity, maxX = -Infinity;
+  let minPX = Infinity, minPY = Infinity, maxPX = -Infinity, maxPY = -Infinity;
 
   const lonlats = [];
   const fill_indices = [];
@@ -105,10 +105,12 @@ async function main() {
         ring.push(new THREE.Vector2(lon, lat));
         lonlats.push(lon, lat);
 
-        if (lon < minX) minX = lon;
-        if (lon > maxX) maxX = lon;
-        if (lat < minY) minY = lat;
-        if (lat > maxY) maxY = lat;
+        // TODO: Consider doing projection during calculation of msgpk file rather than at runtime.
+        const [px, py] = Albers(lat, lon, c);
+        if (px < minPX) minPX = px;
+        if (px > maxPX) maxPX = px;
+        if (py < minPY) minPY = py;
+        if (py > maxPY) maxPY = py;
       }
 
       if (!ring[0].equals(ring[ring.length - 1])) {
@@ -131,18 +133,11 @@ async function main() {
     }
   }
 
-  const mina = Albers(minY, minX, c);
-  const maxa = Albers(maxY, maxX, c);
-  minX = Math.min(mina[0], maxa[0]);
-  maxX = Math.max(mina[0], maxa[0]);
-  minY = Math.min(mina[1], maxa[1]);
-  maxY = Math.max(mina[1], maxa[1]);
-
-  const cx = (minX + maxX) / 2;
-  const cy = (minY + maxY) / 2;
-  const width = maxX - minX;
-  const height = maxY - minY;
-  const scale = 3 / Math.max(width, height);
+  const cx = (minPX + maxPX) / 2;
+  const cy = (minPY + maxPY) / 2;
+  const width = maxPX - minPX;
+  const height = maxPY - minPY;
+  let scale = 1.0;
 
   const lonlat_attr = new THREE.Float32BufferAttribute(lonlats, 2);
 
@@ -171,7 +166,9 @@ async function main() {
     transparent: true,
     side: THREE.DoubleSide
   });
-  scene.add(new THREE.Mesh(fill_geometry, fill_material));
+  const fill_mesh = new THREE.Mesh(fill_geometry, fill_material);
+  fill_mesh.frustumCulled = false;
+  scene.add(fill_mesh);
 
   const line_geometry = new THREE.BufferGeometry();
   line_geometry.setAttribute('lonlat', lonlat_attr);
@@ -194,7 +191,9 @@ async function main() {
     fragmentShader: fragment_shader,
     transparent: true
   });
-  scene.add(new THREE.LineSegments(line_geometry, line_material));
+  const line_mesh = new THREE.LineSegments(line_geometry, line_material);
+  line_mesh.frustumCulled = false;
+  scene.add(line_mesh);
 
   let dragging = false;
   let previous_mouse = new THREE.Vector2();
@@ -208,13 +207,16 @@ async function main() {
 
   window.addEventListener("mousemove", (e) => {
     if (dragging) {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      if (w <= 0 || h <= 0) return;
+
       const dx = e.clientX - previous_mouse.x;
       const dy = e.clientY - previous_mouse.y;
 
-      // Convert screen pixels to device coordinate space
-      const aspect = canvas.clientWidth / canvas.clientHeight;
-      offset.x += (dx / canvas.clientWidth) * 2 * aspect;
-      offset.y -= (dy / canvas.clientHeight) * 2;
+      const aspect = w / h;
+      offset.x += (dx / w) * 2 * aspect;
+      offset.y -= (dy / h) * 2;
 
       fill_material.uniforms.offset.value.copy(offset);
       line_material.uniforms.offset.value.copy(offset);
@@ -236,11 +238,13 @@ async function main() {
 
   window.addEventListener("wheel", (e) => {
     e.preventDefault();
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (w <= 0 || h <= 0) return;
+
     let factor = e.deltaY > 0 ? 0.9 : 1.1;
 
     // Mouse position in device coordinate space (matching camera bounds)
-    const w = canvas.clientWidth || window.innerWidth;
-    const h = canvas.clientHeight || window.innerHeight;
     const aspect = w / h;
     const mx = (e.clientX / w * 2 - 1) * aspect;
     const my = -(e.clientY / h * 2 - 1);
@@ -252,7 +256,6 @@ async function main() {
     factor = zoom / old;
 
     // Adjust offset to keep the point under the mouse stationary
-    // offset_new = S_mouse - (S_mouse - offset_old) * (zoom_new / zoom_old)
     offset.x = mx - (mx - offset.x) * factor;
     offset.y = my - (my - offset.y) * factor;
 
@@ -263,18 +266,23 @@ async function main() {
   }, { passive: false });
 
   function resize() {
-    const w = canvas.clientWidth || window.innerWidth;
-    const h = canvas.clientHeight || window.innerHeight;
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    if (w <= 0 || h <= 0) return;
+
     renderer.setSize(w, h, false);
     const aspect = w / h;
     camera.left = -aspect;
     camera.right = aspect;
     camera.top = 1;
     camera.bottom = -1;
-    camera.near = -10;
-    camera.far = 10;
-    camera.position.set(0, 0, 1);
     camera.updateProjectionMatrix();
+
+    if (width > 0 && height > 0) {
+      scale = Math.min(1.9 / height, (1.9 * aspect) / width);
+      if (fill_material.uniforms) fill_material.uniforms.scale.value = scale;
+      if (line_material.uniforms) line_material.uniforms.scale.value = scale;
+    }
   }
 
   window.addEventListener("resize", resize, { passive: true });

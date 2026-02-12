@@ -3,21 +3,21 @@ package serve
 import (
 	"fmt"
 	"io"
-	"log"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/gorilla/mux"
-	"github.com/nilptrderef/gogeo/cmd/serve/templates"
+	"github.com/nilptrderef/gogeo/frontend"
 	"github.com/spf13/cobra"
 )
 
 var (
-	Port      int
-	Listen    bool
-	StaticDir string
+	Port    int
+	Listen  bool
+	DataDir string
 )
 
 var ServeCmd = &cobra.Command{
@@ -26,8 +26,8 @@ var ServeCmd = &cobra.Command{
 	Long:  `Starts a simple HTTP server to serve static files from a specified directory.`,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		// Verify the static directory exists
-		if _, err := os.Stat(StaticDir); os.IsNotExist(err) {
-			return fmt.Errorf("static directory '%s' does not exist", StaticDir)
+		if _, err := os.Stat(DataDir); os.IsNotExist(err) {
+			return fmt.Errorf("data directory '%s' does not exist", DataDir)
 		}
 
 		// Determine host
@@ -39,14 +39,12 @@ var ServeCmd = &cobra.Command{
 
 		// Setup Router
 		r := mux.NewRouter()
-		r.HandleFunc("/", Index)
 		r.HandleFunc("/data", Data)
-
-		// Serve static files
-		// We use StripPrefix so the server doesn't look for /static/filename inside the folder
-		// but rather serves the content of the folder at the root path.
-		fs := http.FileServer(http.Dir(StaticDir))
-		r.PathPrefix("/").Handler(fs)
+		files, err := fs.Sub(frontend.Files, "build")
+		if err != nil {
+			return err
+		}
+		r.PathPrefix("/").Handler(http.FileServerFS(files))
 
 		srv := &http.Server{
 			Handler:      r,
@@ -55,10 +53,6 @@ var ServeCmd = &cobra.Command{
 			ReadTimeout:  15 * time.Second,
 		}
 
-		// Log absolute path for clarity
-		absPath, _ := filepath.Abs(StaticDir)
-		log.Printf("Serving %s on http://%s", absPath, addr)
-
 		return srv.ListenAndServe()
 	},
 }
@@ -66,17 +60,14 @@ var ServeCmd = &cobra.Command{
 func init() {
 	ServeCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port to listen on")
 	ServeCmd.Flags().BoolVarP(&Listen, "listen", "l", false, "Toggle to listen on 0.0.0.0 instead of localhost")
-	ServeCmd.Flags().StringVarP(&StaticDir, "dir", "d", "./cmd/serve/static/", "Directory to serve static files from")
-}
-
-func Index(w http.ResponseWriter, r *http.Request) {
-	templates.Index().Render(r.Context(), w)
+	ServeCmd.Flags().StringVarP(&DataDir, "dir", "d", "./cmd/serve/static/", "Directory to serve static files from")
 }
 
 func Data(w http.ResponseWriter, r *http.Request) {
-	file, err := os.Open(filepath.Join(StaticDir, "counties.msgpk"))
+	file, err := os.Open(filepath.Join(DataDir, "counties.msgpk"))
 	if err != nil {
-		templates.Error("Failed to open file.").Render(r.Context(), w)
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(`{"error": "failed to load msgpk file"}`))
 		return
 	}
 	defer file.Close()

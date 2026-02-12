@@ -58,7 +58,7 @@ var ServeCmd = &cobra.Command{
 }
 
 func init() {
-	ServeCmd.Flags().IntVarP(&Port, "port", "p", 8080, "Port to listen on")
+	ServeCmd.Flags().IntVarP(&Port, "port", "p", 3000, "Port to listen on")
 	ServeCmd.Flags().BoolVarP(&Listen, "listen", "l", false, "Toggle to listen on 0.0.0.0 instead of localhost")
 	ServeCmd.Flags().StringVarP(&DataDir, "dir", "d", "./cmd/serve/static/", "Directory to serve static files from")
 }

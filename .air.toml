@@ -33,6 +33,6 @@ tmp_dir = "build"
 
 [proxy]
   enabled = true
-  proxy_port = 8383
-  app_port = 8080
+  proxy_port = 3333
+  app_port = 3000
   app_start_timeout = 15000

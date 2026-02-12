@@ -33,7 +33,7 @@ function Albers(lat, lon, c) {
   return [x, y];
 }
 
-const vertexShader = `
+const vertex_shader = `
   uniform float n;
   uniform float C;
   uniform float rho0;
@@ -46,9 +46,7 @@ const vertexShader = `
 
   attribute vec2 lonlat;
 
-  void main() {
-    float lon = lonlat.x;
-    float lat = lonlat.y;
+  vec2 Albers(float lon, float lat) {
     float phir = lat * 0.017453292519943295;
     float lamr = lon * 0.017453292519943295;
 
@@ -56,13 +54,16 @@ const vertexShader = `
     float theta = n * (lamr - lam0r);
     float x = rho * sin(theta);
     float y = rho0 - rho * cos(theta);
+    return vec2(x, y);
+  }
 
-    vec2 projected = (vec2(x, y) - center) * scale * zoom + offset;
+  void main() {
+    vec2 projected = (Albers(lonlat.x, lonlat.y) - center) * scale * zoom + offset;
     gl_Position = projectionMatrix * modelViewMatrix * vec4(projected, 0.0, 1.0);
   }
 `;
 
-const fragmentShader = `
+const fragment_shader = `
   uniform vec3 color;
   uniform float opacity;
   void main() {
@@ -165,8 +166,8 @@ async function main() {
       color: { value: new THREE.Color(0xffffff) },
       opacity: { value: 0.35 }
     },
-    vertexShader,
-    fragmentShader,
+    vertexShader: vertex_shader,
+    fragmentShader: fragment_shader,
     transparent: true,
     side: THREE.DoubleSide
   });
@@ -189,8 +190,8 @@ async function main() {
       color: { value: new THREE.Color(0xffffff) },
       opacity: { value: 0.9 }
     },
-    vertexShader,
-    fragmentShader,
+    vertexShader: vertex_shader,
+    fragmentShader: fragment_shader,
     transparent: true
   });
   scene.add(new THREE.LineSegments(line_geometry, line_material));

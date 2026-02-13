@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strconv"
 
+	"github.com/nilptrderef/gogeo/internal/common"
 	. "github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/dbase"
 )
@@ -84,6 +85,25 @@ func (s *Shapefile) LoadAttributes(r io.Reader) error {
 		}
 	}
 	return nil
+}
+
+func (s *Shapefile) Project() {
+	s.Header.Shape.Mbr.Start.X = math.MaxFloat64
+	s.Header.Shape.Mbr.Start.Y = math.MaxFloat64
+	s.Header.Shape.Mbr.End.X = -math.MaxFloat64
+	s.Header.Shape.Mbr.End.Y = -math.MaxFloat64
+
+	constant := common.AlbersConstant(common.AlbersParams{Phi1: 29.5, Phi2: 45.5, Phi0: 23, Lam0: -96})
+	for i, record := range s.Records {
+		for j, pt := range record.Polygon.Points {
+			s.Records[i].Polygon.Points[j] = Albers(pt.Y, pt.X, constant)
+			pt = s.Records[i].Polygon.Points[j]
+			s.Header.Shape.Mbr.Start.X = min(s.Header.Shape.Mbr.Start.X, pt.X)
+			s.Header.Shape.Mbr.End.X = max(s.Header.Shape.Mbr.End.X, pt.X)
+			s.Header.Shape.Mbr.Start.Y = min(s.Header.Shape.Mbr.Start.Y, pt.Y)
+			s.Header.Shape.Mbr.End.Y = max(s.Header.Shape.Mbr.End.Y, pt.Y)
+		}
+	}
 }
 
 func (s *Shapefile) ToGeoJson() GeoJson {

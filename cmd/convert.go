@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 
+	"github.com/nilptrderef/gogeo/internal/common"
 	"github.com/nilptrderef/gogeo/internal/shapefile"
 	"github.com/nilptrderef/gogeo/internal/simplification"
 	"github.com/tinylib/msgp/msgp"
@@ -18,6 +20,8 @@ var (
 	DbfPath            string
 	SimplifyPercentage float64
 	SimplifyAlgorithm  string
+	PreProject         bool
+	StateFilter        []string
 	OutFile            string
 )
 
@@ -58,6 +62,17 @@ var ConvertCmd = &cobra.Command{
 			if err := shp.LoadAttributes(dfile); err != nil {
 				return err
 			}
+		}
+
+		if len(StateFilter) > 0 {
+			shp.Records = slices.DeleteFunc(shp.Records, func(record shapefile.Record) bool {
+				state, found := common.StateAbbrFips[record.Attrs["STATEFP"]]
+				return !found || slices.Contains(StateFilter, state)
+			})
+		}
+
+		if PreProject {
+			shp.Project()
 		}
 
 		var out *os.File
@@ -101,5 +116,7 @@ func init() {
 	ConvertCmd.Flags().StringVarP(&DbfPath, "dbf", "d", "", "Path of the dbase file")
 	ConvertCmd.Flags().Float64VarP(&SimplifyPercentage, "sp", "p", 1.0, "A float between 0 and 1 that represents the approximate percentage of remaining points")
 	ConvertCmd.Flags().StringVarP(&SimplifyAlgorithm, "sa", "a", "doug", "The algorithm to use when simplifying. 'vis' for Visvalingam-Whyatt or 'doug' for Douglas-Peucker)")
+	ConvertCmd.Flags().BoolVar(&PreProject, "project", false, "Whether the program should pre-project the points from latitude and longitude.")
+	ConvertCmd.Flags().StringArrayVar(&StateFilter, "state-filter", []string{"AK", "HI", "PR", "GU", "AS", "VI", "MP"}, "States to filter out of the output based on their STATEFP value.")
 	ConvertCmd.Flags().StringVarP(&OutFile, "output", "o", "", "Output file path")
 }

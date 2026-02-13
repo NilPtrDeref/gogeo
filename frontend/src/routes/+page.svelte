@@ -3,50 +3,41 @@
 	import * as THREE from 'three';
 	import * as MessagePack from '@msgpack/msgpack';
 
-	let data = $state();
-	let canvas = $state();
+	interface Point {
+		x: number;
+		y: number;
+	}
 
-	async function load() {
+	interface Rectangle {
+		start: Point;
+		end: Point;
+	}
+
+	interface County {
+		id: String;
+		name: String;
+		state: String;
+		intlat: number;
+		intlon: number;
+		minimum_bounding_rectangle: Rectangle;
+		coordinates: Array<number[]>;
+	}
+
+	interface CountyMap {
+		minimum_bounding_rectangle: Rectangle;
+		counties: County[];
+	}
+
+	let canvas: HTMLCanvasElement | undefined = $state();
+
+	async function load(): Promise<CountyMap> {
 		const response = await fetch('/data');
 		const buffer = await response.arrayBuffer();
-		return MessagePack.decode(buffer);
+		return MessagePack.decode<CountyMap>(buffer) as CountyMap;
 	}
 
-	const d2r = (d: number) => (d * Math.PI) / 180;
-
-	interface AlbersParams {
-		phi1: number;
-		phi2: number;
-		phi0: number;
-		lam0: number;
-	}
-
-	function AlbersConstant(opts: AlbersParams) {
-		const phi1r = d2r(opts.phi1);
-		const phi2r = d2r(opts.phi2);
-		const phi0r = d2r(opts.phi0);
-		const lam0r = d2r(opts.lam0);
-
-		const n = 0.5 * (Math.sin(phi1r) + Math.sin(phi2r));
-		const C = Math.cos(phi1r) ** 2 + 2 * n * Math.sin(phi1r);
-		const Rn = 6378 / n;
-		const rho0 = Rn * Math.sqrt(C - 2 * n * Math.sin(phi0r));
-
-		return { n, C, rho0, lam0r, Rn };
-	}
-
-	function Albers(lat: number, lon: number, c: any) {
-		const phir = d2r(lat);
-		const lamr = d2r(lon);
-
-		const rho = c.Rn * Math.sqrt(c.C - 2 * c.n * Math.sin(phir));
-		const theta = c.n * (lamr - c.lam0r);
-		const x = rho * Math.sin(theta);
-		const y = c.rho0 - rho * Math.cos(theta);
-		return [x, y];
-	}
-
-	function pointInPolygon(x: number, y: number, ring: any) {
+	// Finds if a point is in a polygon using raycasting
+	function PointInPolygon(x: number, y: number, ring: number[]) {
 		let inside = false;
 		for (let i = 0, j = ring.length - 2; i < ring.length; i += 2) {
 			const xi = ring[i],
@@ -96,32 +87,10 @@
 		const m = await load();
 		const conus = m.counties;
 
-		let minPX = Infinity,
-			minPY = Infinity,
-			maxPX = -Infinity,
-			maxPY = -Infinity;
-
-		const countiesData = conus.map((county, index) => {
-			const parts = county.coordinates.map((part) => {
-				const projectedPart = [];
-				for (let i = 0; i < part.length; i += 2) {
-					const px = part[i];
-					const py = part[i + 1];
-					projectedPart.push(px, py);
-					if (px < minPX) minPX = px;
-					if (px > maxPX) maxPX = px;
-					if (py < minPY) minPY = py;
-					if (py > maxPY) maxPY = py;
-				}
-				return projectedPart;
-			});
-			return { parts, id: index, bbox: null };
-		});
-
-		const cx = (minPX + maxPX) / 2;
-		const cy = (minPY + maxPY) / 2;
-		const width = maxPX - minPX;
-		const height = maxPY - minPY;
+		const cx = (m.minimum_bounding_rectangle.start.x + m.minimum_bounding_rectangle.end.x) / 2;
+		const cy = (m.minimum_bounding_rectangle.start.y + m.minimum_bounding_rectangle.end.y) / 2;
+		const width = m.minimum_bounding_rectangle.end.x - m.minimum_bounding_rectangle.start.x;
+		const height = m.minimum_bounding_rectangle.end.y - m.minimum_bounding_rectangle.start.y;
 
 		const positions = [];
 		const ids = [];
@@ -129,40 +98,44 @@
 		const line_indices = [];
 		let vertex_offset = 0;
 
-		for (const cData of countiesData) {
-			let cMinX = Infinity,
-				cMaxX = -Infinity,
-				cMinY = Infinity,
-				cMaxY = -Infinity;
+		let id = 0;
+		for (const county of conus) {
+			// Translate mbr for bounds checking
+			county.minimum_bounding_rectangle.start.x -= cx;
+			county.minimum_bounding_rectangle.start.y -= cy;
+			county.minimum_bounding_rectangle.end.x -= cx;
+			county.minimum_bounding_rectangle.end.y -= cy;
 
-			for (const part of cData.parts) {
+			for (const part of county.coordinates) {
 				if (part.length < 6) continue;
 
 				const ring = [];
 				for (let j = 0; j < part.length; j += 2) {
 					const x = part[j] - cx;
 					const y = part[j + 1] - cy;
+
+					// Translate each point so that it is centered
 					part[j] = x;
 					part[j + 1] = y;
 
-					if (x < cMinX) cMinX = x;
-					if (x > cMaxX) cMaxX = x;
-					if (y < cMinY) cMinY = y;
-					if (y > cMaxY) cMaxY = y;
-
 					ring.push(new THREE.Vector2(x, y));
 					positions.push(x, y, 0);
-					ids.push(cData.id);
+					ids.push(id);
 				}
 
+				// Complete the loop if necessary
 				if (ring.length > 0 && !ring[0].equals(ring[ring.length - 1])) {
 					const first = ring[0];
 					ring.push(first.clone());
 					positions.push(first.x, first.y, 0);
-					ids.push(cData.id);
+					ids.push(id);
 				}
 
 				const vertices_count = ring.length;
+				for (let j = 0; j < vertices_count - 1; j++) {
+					line_indices.push(vertex_offset + j, vertex_offset + j + 1);
+				}
+
 				const triangles = THREE.ShapeUtils.triangulateShape(ring, []);
 				for (let j = 0; j < triangles.length; j++) {
 					const triangle = triangles[j];
@@ -173,13 +146,9 @@
 					);
 				}
 
-				for (let j = 0; j < vertices_count - 1; j++) {
-					line_indices.push(vertex_offset + j, vertex_offset + j + 1);
-				}
-
 				vertex_offset += vertices_count;
 			}
-			cData.bbox = [cMinX, cMaxX, cMinY, cMaxY];
+			id++;
 		}
 
 		let scale = 1.0;
@@ -334,21 +303,27 @@
 			const ly = (my - offset.y) / (scale * zoom);
 
 			let hoveredId = -1;
-			for (const cData of countiesData) {
-				const bbox = cData.bbox;
-				if (lx >= bbox[0] && lx <= bbox[1] && ly >= bbox[2] && ly <= bbox[3]) {
+			let id = 0;
+			for (const county of conus) {
+				if (
+					lx >= county.minimum_bounding_rectangle.start.x &&
+					lx <= county.minimum_bounding_rectangle.end.x &&
+					ly >= county.minimum_bounding_rectangle.start.y &&
+					ly <= county.minimum_bounding_rectangle.end.y
+				) {
 					let inside = false;
-					for (const part of cData.parts) {
-						if (pointInPolygon(lx, ly, part)) {
+					for (const part of county.coordinates) {
+						if (PointInPolygon(lx, ly, part)) {
 							inside = true;
 							break;
 						}
 					}
 					if (inside) {
-						hoveredId = cData.id;
+						hoveredId = id;
 						break;
 					}
 				}
+				id++;
 			}
 			fill_material.uniforms.hoveredId.value = hoveredId;
 			line_material.uniforms.hoveredId.value = hoveredId;

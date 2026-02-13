@@ -2,6 +2,15 @@
 
 Golang Geography and US Map visualization Application
 
+## Web interface
+
+You can serve a web interface to view the map. It provides some basic zoom/move functionality.
+Currently, it expects that you have converted the shapefile to a msgpack file and pre-projected
+the points.
+
+It's not slow at 100% of the geometry, but it does load much faster when you simplify the geometry
+down to about 10%.
+
 ## Data Sources
 
 Download the County or ZCTA (ZIP Code Tabulation Areas) shapefiles from the

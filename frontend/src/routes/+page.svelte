@@ -92,11 +92,9 @@
 		const scene = new THREE.Scene();
 		const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1, 1);
 
+		// NOTE: This application expects that the points are pre-projected
 		const m = await load();
-		const c = AlbersConstant({ phi1: 29.5, phi2: 45.5, phi0: 23, lam0: -96 });
-
-		const excluded = ['AK', 'HI', 'PR', 'GU', 'AS', 'VI', 'MP', ''];
-		const conus = m.counties.filter((county) => county.state && !excluded.includes(county.state));
+		const conus = m.counties;
 
 		let minPX = Infinity,
 			minPY = Infinity,
@@ -107,7 +105,8 @@
 			const parts = county.coordinates.map((part) => {
 				const projectedPart = [];
 				for (let i = 0; i < part.length; i += 2) {
-					const [px, py] = Albers(part[i + 1], part[i], c);
+					const px = part[i];
+					const py = part[i + 1];
 					projectedPart.push(px, py);
 					if (px < minPX) minPX = px;
 					if (px > maxPX) maxPX = px;
@@ -234,6 +233,9 @@
 		let dragging = false;
 		let previous_mouse = new THREE.Vector2();
 		const mouse = new THREE.Vector2();
+
+		// TODO: Remove this, using for rough benchmarking.
+		console.log('Done!');
 
 		window.addEventListener('mousedown', (e) => {
 			if (e.button === 0) {

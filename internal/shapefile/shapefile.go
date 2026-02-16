@@ -107,12 +107,12 @@ func (s *Shapefile) Project() {
 					lon -= 360
 				}
 				projected = Albers(pt.Y, lon, alaska)
-				projected.X = (projected.X * 0.35) - 2900
-				projected.Y = (projected.Y * 0.35) + 1200
+				projected.X = (projected.X * 0.35) - 2100
+				projected.Y = (projected.Y * 0.35) + 50
 			} else if statefp == "15" { // Hawaii
 				projected = Albers(pt.Y, pt.X, hawaii)
-				projected.X = (projected.X * 0.4) - 2900
-				projected.Y = (projected.Y * 0.4) + 400
+				projected.X = (projected.X * 0.4) - 600
+				projected.Y = (projected.Y * 0.4) - 250
 			} else {
 				projected = Albers(pt.Y, pt.X, conus)
 			}

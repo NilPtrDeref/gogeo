@@ -1,4 +1,4 @@
-# gogeo
+# GoGeo
 
 Golang Geography and US Map visualization Application. This is not necessarily meant to be a final product,
 but rather a starting point from which other applications build on top of.
@@ -48,3 +48,9 @@ in order for the `gogeo serve` command to display them.
 * [Visvalingam-Whyatt Algorithm](https://en.wikipedia.org/wiki/Visvalingam%E2%80%93Whyatt_algorithm)
 * [Douglas-Peucker Algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm)
 * [Housing and Urban Development Zipcode Data](https://www.huduser.gov/portal/datasets/usps_crosswalk.html)
+
+## Further Development
+
+* Hover labels
+* Add zipcode breakdown at granular zoom levels
+* Add data input for coloring map

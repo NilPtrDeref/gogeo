@@ -20,3 +20,14 @@ website for the year that you'd like. It will come in a zipfile containing
 The `.shp` and `.dbf` are the primary files that will be necessary for this
 system. You'll process them using the `gogeo convert` command to prepare them
 in order for the `gogeo serve` command to display them.
+
+## Other Resources
+
+* [US Census Geography Relationship Files](https://www.census.gov/geographies/reference-files/time-series/geo/relationship-files.2020.html)
+* [D3 Geography Documentation](https://d3js.org/d3-geo)
+* [D3 Conic Projection Documentation](https://d3js.org/d3-geo/conic)
+* [Shapefile Specification Information](https://en.wikipedia.org/wiki/Shapefile)
+* [DBase file Specification Information](https://www.clicketyclick.dk/databases/xbase/format/dbf.html)
+* [Visvalingam-Whyatt Algorithm](https://en.wikipedia.org/wiki/Visvalingam%E2%80%93Whyatt_algorithm)
+* [Douglas-Peucker Algorithm](https://en.wikipedia.org/wiki/Ramer%E2%80%93Douglas%E2%80%93Peucker_algorithm)
+* [Housing and Urban Development Zipcode Data](https://www.huduser.gov/portal/datasets/usps_crosswalk.html)

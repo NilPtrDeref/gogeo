@@ -117,6 +117,6 @@ func init() {
 	ConvertCmd.Flags().Float64VarP(&SimplifyPercentage, "sp", "p", 1.0, "A float between 0 and 1 that represents the approximate percentage of remaining points")
 	ConvertCmd.Flags().StringVarP(&SimplifyAlgorithm, "sa", "a", "doug", "The algorithm to use when simplifying. 'vis' for Visvalingam-Whyatt or 'doug' for Douglas-Peucker)")
 	ConvertCmd.Flags().BoolVar(&PreProject, "project", false, "Whether the program should pre-project the points from latitude and longitude.")
-	ConvertCmd.Flags().StringArrayVar(&StateFilter, "state-filter", []string{"AK", "HI", "PR", "GU", "AS", "VI", "MP"}, "States to filter out of the output based on their STATEFP value.")
+	ConvertCmd.Flags().StringArrayVar(&StateFilter, "state-filter", []string{"PR", "GU", "AS", "VI", "MP"}, "States to filter out of the output based on their STATEFP value.")
 	ConvertCmd.Flags().StringVarP(&OutFile, "output", "o", "", "Output file path")
 }

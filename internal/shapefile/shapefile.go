@@ -93,15 +93,35 @@ func (s *Shapefile) Project() {
 	s.Header.Shape.Mbr.End.X = -math.MaxFloat64
 	s.Header.Shape.Mbr.End.Y = -math.MaxFloat64
 
-	constant := common.AlbersConstant(common.AlbersParams{Phi1: 29.5, Phi2: 45.5, Phi0: 23, Lam0: -96})
+	conus := common.AlbersConstant(common.AlbersParams{Phi1: 29.5, Phi2: 45.5, Phi0: 23, Lam0: -96})
+	alaska := common.AlbersConstant(common.AlbersParams{Phi1: 55, Phi2: 65, Phi0: 50, Lam0: -154})
+	hawaii := common.AlbersConstant(common.AlbersParams{Phi1: 8, Phi2: 18, Phi0: 13, Lam0: -157})
+
 	for i, record := range s.Records {
+		statefp := record.Attrs["STATEFP"]
 		for j, pt := range record.Polygon.Points {
-			s.Records[i].Polygon.Points[j] = Albers(pt.Y, pt.X, constant)
-			pt = s.Records[i].Polygon.Points[j]
-			s.Header.Shape.Mbr.Start.X = min(s.Header.Shape.Mbr.Start.X, pt.X)
-			s.Header.Shape.Mbr.End.X = max(s.Header.Shape.Mbr.End.X, pt.X)
-			s.Header.Shape.Mbr.Start.Y = min(s.Header.Shape.Mbr.Start.Y, pt.Y)
-			s.Header.Shape.Mbr.End.Y = max(s.Header.Shape.Mbr.End.Y, pt.Y)
+			var projected common.Point
+			if statefp == "02" { // Alaska
+				lon := pt.X
+				if lon > 0 {
+					lon -= 360
+				}
+				projected = Albers(pt.Y, lon, alaska)
+				projected.X = (projected.X * 0.35) - 2900
+				projected.Y = (projected.Y * 0.35) + 1200
+			} else if statefp == "15" { // Hawaii
+				projected = Albers(pt.Y, pt.X, hawaii)
+				projected.X = (projected.X * 0.4) - 2900
+				projected.Y = (projected.Y * 0.4) + 400
+			} else {
+				projected = Albers(pt.Y, pt.X, conus)
+			}
+			s.Records[i].Polygon.Points[j] = projected
+
+			s.Header.Shape.Mbr.Start.X = min(s.Header.Shape.Mbr.Start.X, projected.X)
+			s.Header.Shape.Mbr.End.X = max(s.Header.Shape.Mbr.End.X, projected.X)
+			s.Header.Shape.Mbr.Start.Y = min(s.Header.Shape.Mbr.Start.Y, projected.Y)
+			s.Header.Shape.Mbr.End.Y = max(s.Header.Shape.Mbr.End.Y, projected.Y)
 		}
 	}
 }

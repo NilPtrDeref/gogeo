@@ -203,9 +203,6 @@
 		let previous_mouse = new THREE.Vector2();
 		const mouse = new THREE.Vector2();
 
-		// TODO: Remove this, using for rough benchmarking.
-		console.log('Done!');
-
 		window.addEventListener('mousedown', (e) => {
 			if (e.button === 0) {
 				dragging = true;
@@ -285,7 +282,7 @@
 			camera.updateProjectionMatrix();
 
 			if (width > 0 && height > 0) {
-				scale = Math.min(1.9 / height, (1.9 * aspect) / width);
+				scale = Math.min(1.8 / height, (1.8 * aspect) / width);
 				updateTransforms();
 			}
 		}

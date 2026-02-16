@@ -155,6 +155,9 @@
 		let zoom = 1.0;
 		let offset = new THREE.Vector2(0, 0);
 
+		let target_zoom = 1.0;
+		let target_offset = new THREE.Vector2(0, 0);
+
 		const fill_geometry = new THREE.BufferGeometry();
 		fill_geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
 		fill_geometry.setAttribute('id', new THREE.Float32BufferAttribute(ids, 1));
@@ -204,9 +207,45 @@
 		const mouse = new THREE.Vector2();
 
 		window.addEventListener('mousedown', (e) => {
-			if (e.button === 0) {
+			if (e.button === 2) {
 				dragging = true;
 				previous_mouse.set(e.clientX, e.clientY);
+			} else if (e.button === 0) {
+				// Smooth zoom to county
+				const w = window.innerWidth;
+				const h = window.innerHeight;
+				const aspect = w / h;
+				const mx = ((e.clientX / w) * 2 - 1) * aspect;
+				const my = -((e.clientY / h) * 2 - 1);
+
+				const lx = (mx - offset.x) / (scale * zoom);
+				const ly = (my - offset.y) / (scale * zoom);
+
+				for (const county of conus) {
+					const mbr = county.minimum_bounding_rectangle;
+					if (lx >= mbr.start.x && lx <= mbr.end.x && ly >= mbr.start.y && ly <= mbr.end.y) {
+						let inside = false;
+						for (const part of county.coordinates) {
+							if (PointInPolygon(lx, ly, part)) {
+								inside = true;
+								break;
+							}
+						}
+						if (inside) {
+							const cw = mbr.end.x - mbr.start.x;
+							const ch = mbr.end.y - mbr.start.y;
+							const ctx = (mbr.start.x + mbr.end.x) / 2;
+							const cty = (mbr.start.y + mbr.end.y) / 2;
+
+							target_zoom = Math.min(1.2 / (ch * scale), (1.2 * aspect) / (cw * scale));
+							target_zoom = Math.min(target_zoom, 3.0);
+
+							target_offset.x = -ctx * scale * target_zoom;
+							target_offset.y = -cty * scale * target_zoom;
+							break;
+						}
+					}
+				}
 			}
 		});
 
@@ -225,8 +264,8 @@
 				const aspect = w / h;
 				offset.x += (dx / w) * 2 * aspect;
 				offset.y -= (dy / h) * 2;
+				target_offset.copy(offset);
 
-				updateTransforms();
 				previous_mouse.set(e.clientX, e.clientY);
 			}
 		});
@@ -235,9 +274,13 @@
 
 		window.addEventListener('contextmenu', (e) => {
 			e.preventDefault();
-			zoom = 1.0;
-			offset.set(0, 0);
-			updateTransforms();
+		});
+
+		window.addEventListener('keydown', (e) => {
+			if (e.code === 'Escape' || e.code === 'Space') {
+				target_zoom = 1.0;
+				target_offset.set(0, 0);
+			}
 		});
 
 		window.addEventListener(
@@ -263,7 +306,8 @@
 				offset.x = mx - (mx - offset.x) * factor;
 				offset.y = my - (my - offset.y) * factor;
 
-				updateTransforms();
+				target_zoom = zoom;
+				target_offset.copy(offset);
 			},
 			{ passive: false }
 		);
@@ -291,6 +335,13 @@
 		resize();
 
 		function render() {
+			// Interpolate zoom and offset
+			const lerp_factor = 0.03;
+			zoom += (target_zoom - zoom) * lerp_factor;
+			offset.x += (target_offset.x - offset.x) * lerp_factor;
+			offset.y += (target_offset.y - offset.y) * lerp_factor;
+			updateTransforms();
+
 			// Optimized CPU picking
 			const aspect = window.innerWidth / window.innerHeight;
 			const mx = mouse.x * aspect;

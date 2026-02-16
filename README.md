@@ -1,6 +1,23 @@
 # gogeo
 
-Golang Geography and US Map visualization Application
+Golang Geography and US Map visualization Application. This is not necessarily meant to be a final product,
+but rather a starting point from which other applications build on top of.
+
+![Map](images/map.png)
+
+## Setup
+
+First you need to download the files mentioned in the [Data Sources section](#data-sources).
+Then, after you have the files, you will need unzip them and convert them with the pre-projection flag.
+I would recommend the following command which will pre-project and simplify the files down to 10% of
+the original geometry.
+
+```
+mkdir -p cmd/serve/static
+go run . convert -s <path-to-.shp> -d <path-to-.dbf> -o cmd/serve/static/counties.msgpk --project -p 0.1
+```
+
+Then you can run `make serve` to serve the web interface.
 
 ## Web interface
 
